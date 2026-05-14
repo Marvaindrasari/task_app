@@ -54,9 +54,10 @@ export default function CreateNewTask({
     dueDate: "",
     assigneeId: "",
     status: TaskStatus.TODO,
-    projectId: "",
+    projectId: "", // tetap dipakai dari dropdown
   });
 
+  // ambil user login
   useEffect(() => {
     let mounted = true;
 
@@ -83,6 +84,7 @@ export default function CreateNewTask({
     };
   }, []);
 
+  // fetch projects
   useEffect(() => {
     let mounted = true;
 
@@ -94,15 +96,7 @@ export default function CreateNewTask({
           `/api/projects?workspaceId=${workspaceId}`
         );
 
-        const text = await res.text();
-
-        let data: any;
-
-        try {
-          data = JSON.parse(text);
-        } catch {
-          data = text;
-        }
+        const data = await res.json().catch(() => null);
 
         if (!mounted) return;
 
@@ -117,24 +111,21 @@ export default function CreateNewTask({
           }))
         );
       } catch (err) {
-        console.error("fetchProjects error:", err);
+        console.error(err);
         setProjects([]);
       } finally {
         if (mounted) setLoadingProjects(false);
       }
     }
 
-    if (workspaceId) {
-      fetchProjects();
-    } else {
-      setLoadingProjects(false);
-    }
+    if (workspaceId) fetchProjects();
 
     return () => {
       mounted = false;
     };
   }, [workspaceId]);
 
+  // fetch members
   useEffect(() => {
     let mounted = true;
 
@@ -142,119 +133,33 @@ export default function CreateNewTask({
       setLoadingMembers(true);
 
       try {
-        const tryEndpoints = [
-          `/api/members/${workspaceId}`,
-          `/api/members?workspaceId=${workspaceId}`,
-        ];
+        const res = await fetch(
+          `/api/members?workspaceId=${workspaceId}`
+        );
 
-        let raw: any = null;
-
-        for (const url of tryEndpoints) {
-          try {
-            const res = await fetch(url);
-
-            const text = await res.text();
-
-            const data = (() => {
-              try {
-                return JSON.parse(text);
-              } catch {
-                return text;
-              }
-            })();
-
-            if (res.ok) {
-              raw = data;
-              break;
-            }
-
-            if (
-              data &&
-              (
-                Array.isArray(data) ||
-                data.documents ||
-                data.data ||
-                data.members ||
-                data.workspaces
-              )
-            ) {
-              raw = data;
-              break;
-            }
-          } catch (e) {
-            console.error(e);
-          }
-        }
+        const data = await res.json().catch(() => null);
 
         if (!mounted) return;
 
-        if (!raw) {
-          setMembers([]);
-          return;
-        }
+        const docs =
+          data?.members || data?.data || data?.documents || [];
 
-        let docs: any[] = [];
-
-        if (Array.isArray(raw)) docs = raw;
-        else if (raw.documents) docs = raw.documents;
-        else if (raw.data) docs = raw.data;
-        else if (raw.members && Array.isArray(raw.members))
-          docs = raw.members;
-        else if (raw.workspaces && Array.isArray(raw.workspaces)) {
-          docs = raw.workspaces.flatMap(
-            (w: any) => w.members || []
-          );
-        } else {
-          docs = [raw];
-        }
-
-        if (
-          docs.length &&
-          docs[0] &&
-          Array.isArray(docs[0].members)
-        ) {
-          docs = docs.flatMap((d: any) => d.members || []);
-        }
-
-        const mapped: Member[] = docs
-          .map((m: any) => ({
-            $id:
-              m.$id ||
-              m.id ||
-              `${m.userId ?? ""}-${Math.random()}`,
-
-            userId:
-              m.userId ||
-              m.user_id ||
-              m.user?.$id ||
-              m.$id ||
-              m.id ||
-              "",
-
-            userName:
-              m.userName ||
-              m.name ||
-              m.user?.name ||
-              m.displayName ||
-              m.username ||
-              "Tanpa Nama",
-          }))
-          .filter((x) => x.userId);
+        const mapped: Member[] = docs.map((m: any) => ({
+          $id: m.$id || m.id,
+          userId: m.userId || m.user?.$id,
+          userName: m.userName || m.name || "Unknown",
+        }));
 
         setMembers(mapped);
       } catch (err) {
-        console.error("fetchMembers error:", err);
+        console.error(err);
         setMembers([]);
       } finally {
         if (mounted) setLoadingMembers(false);
       }
     }
 
-    if (workspaceId) {
-      fetchMembers();
-    } else {
-      setLoadingMembers(false);
-    }
+    if (workspaceId) fetchMembers();
 
     return () => {
       mounted = false;
@@ -262,9 +167,7 @@ export default function CreateNewTask({
   }, [workspaceId]);
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     setFormData((p) => ({
       ...p,
@@ -272,13 +175,11 @@ export default function CreateNewTask({
     }));
   };
 
-  const handleSubmit = async (
-    e: React.FormEvent
-  ) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!workspaceId) {
-      alert("Workspace ID missing");
+    if (!formData.projectId) {
+      alert("Pilih project dulu");
       return;
     }
 
@@ -293,48 +194,24 @@ export default function CreateNewTask({
         createdAt: new Date().toISOString(),
       };
 
-      console.log("POST /api/tasks payload:", payload);
-
       const res = await fetch("/api/tasks", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(payload),
       });
 
-      const text = await res.text();
-
-      let body: any;
-
-      try {
-        body = JSON.parse(text);
-      } catch {
-        body = text;
-      }
+      const body = await res.json().catch(() => null);
 
       if (!res.ok) {
-        console.error(
-          "Create task failed:",
-          res.status,
-          body
-        );
-
-        alert(
-          typeof body === "string"
-            ? body
-            : JSON.stringify(body, null, 2)
-        );
-
+        alert(body?.message || "Failed create task");
         return;
       }
 
       alert("✅ Task created");
-
       router.back();
     } catch (err) {
-      console.error("submit error:", err);
+      console.error(err);
       alert("Error creating task");
     } finally {
       setSubmitting(false);
@@ -351,7 +228,6 @@ export default function CreateNewTask({
       </h2>
 
       <Input
-        type="text"
         name="name"
         placeholder="Task Title"
         value={formData.name}
@@ -366,166 +242,95 @@ export default function CreateNewTask({
         onChange={handleChange}
       />
 
-      <div>
-        <label className="text-sm font-medium mb-1 block">
-          Project
-        </label>
+      {/* PROJECT DROPDOWN */}
+      <Select
+        value={formData.projectId}
+        onValueChange={(val) =>
+          setFormData((p) => ({
+            ...p,
+            projectId: val,
+          }))
+        }
+      >
+        <SelectTrigger>
+          <SelectValue
+            placeholder={
+              loadingProjects
+                ? "Loading projects..."
+                : "Select Project"
+            }
+          />
+        </SelectTrigger>
 
-        <Select
-          onValueChange={(val) =>
-            setFormData((p) => ({
-              ...p,
-              projectId: val,
-            }))
-          }
-          value={formData.projectId}
-        >
-          <SelectTrigger>
-            <SelectValue
-              placeholder={
-                loadingProjects
-                  ? "Loading projects..."
-                  : "Select Project"
-              }
-            />
-          </SelectTrigger>
-
-          <SelectContent>
-            {loadingProjects ? (
-              <p className="text-center py-2 text-sm text-gray-500">
-                Loading projects...
-              </p>
-            ) : projects.length === 0 ? (
-              <p className="text-center py-2 text-sm text-gray-500">
-                No projects
-              </p>
-            ) : (
-              projects.map((p) => (
-                <SelectItem key={p.$id} value={p.$id}>
-                  {p.projectName}
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <label className="text-sm font-medium mb-1 block">
-          Assignee
-        </label>
-
-        <Select
-          onValueChange={(val) =>
-            setFormData((p) => ({
-              ...p,
-              assigneeId: val,
-            }))
-          }
-          value={formData.assigneeId}
-        >
-          <SelectTrigger>
-            <SelectValue
-              placeholder={
-                loadingMembers
-                  ? "Loading members..."
-                  : "Select Assignee"
-              }
-            />
-          </SelectTrigger>
-
-          <SelectContent>
-            {loadingMembers ? (
-              <p className="text-center py-2 text-sm text-gray-500">
-                Loading members...
-              </p>
-            ) : members.length === 0 ? (
-              <p className="text-center py-2 text-sm text-gray-500">
-                No members found
-              </p>
-            ) : (
-              members.map((m) => (
-                <SelectItem
-                  key={m.userId || m.$id}
-                  value={m.userId || m.$id}
-                >
-                  {m.userName}
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <label className="text-sm font-medium mb-1 block">
-          Due Date
-        </label>
-
-        <Input
-          type="date"
-          name="dueDate"
-          value={formData.dueDate}
-          onChange={handleChange}
-        />
-      </div>
-
-      <div>
-        <label className="text-sm font-medium mb-1 block">
-          Status
-        </label>
-
-        <Select
-          onValueChange={(val) =>
-            setFormData((p) => ({
-              ...p,
-              status: val as TaskStatus,
-            }))
-          }
-          value={formData.status}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select Status" />
-          </SelectTrigger>
-
-          <SelectContent>
-            <SelectItem value={TaskStatus.TODO}>
-              Todo
+        <SelectContent>
+          {projects.map((p) => (
+            <SelectItem key={p.$id} value={p.$id}>
+              {p.projectName}
             </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-            <SelectItem value={TaskStatus.IN_PROGRESS}>
-              In Progress
+      {/* ASSIGNEE */}
+      <Select
+        value={formData.assigneeId}
+        onValueChange={(val) =>
+          setFormData((p) => ({
+            ...p,
+            assigneeId: val,
+          }))
+        }
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Select Assignee" />
+        </SelectTrigger>
+
+        <SelectContent>
+          {members.map((m) => (
+            <SelectItem key={m.userId} value={m.userId}>
+              {m.userName}
             </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-            <SelectItem value={TaskStatus.IN_REVIEW}>
-              In Review
-            </SelectItem>
+      {/* DUE DATE */}
+      <Input
+        type="date"
+        name="dueDate"
+        value={formData.dueDate}
+        onChange={handleChange}
+      />
 
-            <SelectItem value={TaskStatus.DONE}>
-              Done
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* STATUS */}
+      <Select
+        value={formData.status}
+        onValueChange={(val) =>
+          setFormData((p) => ({
+            ...p,
+            status: val as TaskStatus,
+          }))
+        }
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Select Status" />
+        </SelectTrigger>
 
-      <div className="flex flex-col gap-2">
-        <Button
-          type="submit"
-          className="w-full cursor-pointer"
-          disabled={submitting}
-        >
-          {submitting ? "Creating..." : "Create Task"}
-        </Button>
+        <SelectContent>
+          <SelectItem value={TaskStatus.TODO}>Todo</SelectItem>
+          <SelectItem value={TaskStatus.IN_PROGRESS}>
+            In Progress
+          </SelectItem>
+          <SelectItem value={TaskStatus.IN_REVIEW}>
+            In Review
+          </SelectItem>
+          <SelectItem value={TaskStatus.DONE}>Done</SelectItem>
+        </SelectContent>
+      </Select>
 
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full cursor-pointer"
-          onClick={() => router.back()}
-        >
-          Back
-        </Button>
-      </div>
+      <Button type="submit" disabled={submitting}>
+        {submitting ? "Creating..." : "Create Task"}
+      </Button>
     </form>
   );
 }
