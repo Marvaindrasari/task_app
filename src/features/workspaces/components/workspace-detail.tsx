@@ -25,7 +25,6 @@ export const WorkspaceDetail = ({ workspaceId }: WorkspaceDetailProps) => {
             <DottedSeparator />
             <div className="py-4">
                 <p>Workspace code: {workspace.code}</p>
-                <p>Created by: {workspace.createdName}</p>
                 <p>Members: {workspace.membersName?.join(", ")}</p>
             </div>
         </div>
