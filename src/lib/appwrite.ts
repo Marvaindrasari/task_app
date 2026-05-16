@@ -4,7 +4,7 @@ import { Client, Account, Storage, Users, Databases } from "node-appwrite";
 export async function createAdminClient() {
     const client = new Client()
         .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-        .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
+        .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
         .setKey(process.env.NEXT_APPWRITE_KEY!);
 
     return {
@@ -21,7 +21,7 @@ export async function createAdminClient() {
 export const createSessionClient = async (cookies: string | undefined) => {
   const client = new Client()
     .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!);
+    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!);
 
   // ⬇️ Pass cookie dari user (biar Appwrite bisa tahu session siapa)
   if (cookies) {
