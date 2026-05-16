@@ -1,4 +1,5 @@
 import "server-only";
+
 import {
     Account,
     Client,
@@ -26,35 +27,39 @@ type AdditionalContext = {
     };
 };
 
-export const sessionMiddleware = createMiddleware<AdditionalContext>(
-    async (c, next) => {
-        const client =  new Client()
+export const sessionMiddleware =
+createMiddleware<AdditionalContext>(async (c, next) => {
+
+    const session = getCookie(c, AUTH_COOKIE);
+
+    if (!session) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    try {
+        const client = new Client()
             .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
             .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
+            .setSession(session);
 
-        const session = getCookie(c, AUTH_COOKIE);
-
-        if(!session) {
-            return c.json({ error: "Unauthorized" }, 401);
-        }
-
-        client.setSession(session);
-
-        const account =  new Account(client);
-        const databases =  new Databases(client);
-        const storage =  new Storage(client);
+        const account = new Account(client);
+        const databases = new Databases(client);
+        const storage = new Storage(client);
         const users = new Users(client);
 
         const user = await account.get();
-
-        //console.log("Session user dari appwrite:", user);
 
         c.set("account", account);
         c.set("databases", databases);
         c.set("storage", storage);
         c.set("user", user);
         c.set("users", users);
-        
+
         await next();
-    },
-);
+
+    } catch (error) {
+        console.error("SESSION MIDDLEWARE ERROR:", error);
+
+        return c.json({ error: "Unauthorized" }, 401);
+    }
+});
