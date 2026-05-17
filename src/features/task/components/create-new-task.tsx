@@ -43,9 +43,12 @@ export default function CreateNewTask({
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [loadingMembers, setLoadingMembers] = useState(true);
+
   const [submitting, setSubmitting] = useState(false);
+
   const [userId, setUserId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -54,10 +57,10 @@ export default function CreateNewTask({
     dueDate: "",
     assigneeId: "",
     status: TaskStatus.TODO,
-    projectId: "", // tetap dipakai dari dropdown
+    projectId: "",
   });
 
-  // ambil user login
+  // GET CURRENT USER
   useEffect(() => {
     let mounted = true;
 
@@ -70,6 +73,8 @@ export default function CreateNewTask({
         if (!res.ok) return;
 
         const json = await res.json();
+
+        console.log("CURRENT USER:", json);
 
         if (mounted && json?.data?.$id) {
           setUserId(json.data.$id);
@@ -84,7 +89,7 @@ export default function CreateNewTask({
     };
   }, []);
 
-  // fetch projects
+  // FETCH PROJECTS
   useEffect(() => {
     let mounted = true;
 
@@ -93,10 +98,15 @@ export default function CreateNewTask({
 
       try {
         const res = await fetch(
-          `/api/projects?workspaceId=${workspaceId}`
+          `/api/projects?workspaceId=${workspaceId}`,
+          {
+            credentials: "include",
+          }
         );
 
         const data = await res.json().catch(() => null);
+
+        console.log("PROJECTS API:", data);
 
         if (!mounted) return;
 
@@ -104,28 +114,38 @@ export default function CreateNewTask({
           ? data
           : data?.documents || data?.data || [];
 
-        setProjects(
-          docs.map((d: any) => ({
-            $id: d.$id || d.id,
-            projectName: d.projectName || d.name || "Untitled",
-          }))
-        );
+        const mappedProjects: Project[] = docs.map((d: any) => ({
+          $id: d.$id || d.id,
+          projectName:
+            d.projectName ||
+            d.name ||
+            "Untitled",
+        }));
+
+        console.log("MAPPED PROJECTS:", mappedProjects);
+
+        setProjects(mappedProjects);
+
       } catch (err) {
-        console.error(err);
+        console.error("FETCH PROJECTS ERROR:", err);
         setProjects([]);
       } finally {
-        if (mounted) setLoadingProjects(false);
+        if (mounted) {
+          setLoadingProjects(false);
+        }
       }
     }
 
-    if (workspaceId) fetchProjects();
+    if (workspaceId) {
+      fetchProjects();
+    }
 
     return () => {
       mounted = false;
     };
   }, [workspaceId]);
 
-  // fetch members
+  // FETCH MEMBERS
   useEffect(() => {
     let mounted = true;
 
@@ -134,32 +154,57 @@ export default function CreateNewTask({
 
       try {
         const res = await fetch(
-          `/api/members?workspaceId=${workspaceId}`
+          `/api/members?workspaceId=${workspaceId}`,
+          {
+            credentials: "include",
+          }
         );
 
         const data = await res.json().catch(() => null);
 
+        console.log("MEMBERS API:", data);
+
         if (!mounted) return;
 
         const docs =
-          data?.members || data?.data || data?.documents || [];
+          data?.members ||
+          data?.data ||
+          data?.documents ||
+          [];
 
         const mapped: Member[] = docs.map((m: any) => ({
           $id: m.$id || m.id,
-          userId: m.userId || m.user?.$id,
-          userName: m.userName || m.name || "Unknown",
+
+          userId:
+            m.userId ||
+            m.user?.$id ||
+            "",
+
+          userName:
+            m.userName ||
+            m.name ||
+            m.user?.name ||
+            m.user?.userName ||
+            "Unknown",
         }));
 
+        console.log("MAPPED MEMBERS:", mapped);
+
         setMembers(mapped);
+
       } catch (err) {
-        console.error(err);
+        console.error("FETCH MEMBERS ERROR:", err);
         setMembers([]);
       } finally {
-        if (mounted) setLoadingMembers(false);
+        if (mounted) {
+          setLoadingMembers(false);
+        }
       }
     }
 
-    if (workspaceId) fetchMembers();
+    if (workspaceId) {
+      fetchMembers();
+    }
 
     return () => {
       mounted = false;
@@ -167,7 +212,9 @@ export default function CreateNewTask({
   }, [workspaceId]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement
+    >
   ) => {
     setFormData((p) => ({
       ...p,
@@ -175,7 +222,9 @@ export default function CreateNewTask({
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (
+    e: React.FormEvent
+  ) => {
     e.preventDefault();
 
     if (!formData.projectId) {
@@ -194,14 +243,20 @@ export default function CreateNewTask({
         createdAt: new Date().toISOString(),
       };
 
+      console.log("TASK PAYLOAD:", payload);
+
       const res = await fetch("/api/tasks", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         credentials: "include",
         body: JSON.stringify(payload),
       });
 
       const body = await res.json().catch(() => null);
+
+      console.log("TASK RESPONSE:", body);
 
       if (!res.ok) {
         alert(body?.message || "Failed create task");
@@ -209,9 +264,11 @@ export default function CreateNewTask({
       }
 
       alert("✅ Task created");
+
       router.back();
+
     } catch (err) {
-      console.error(err);
+      console.error("CREATE TASK ERROR:", err);
       alert("Error creating task");
     } finally {
       setSubmitting(false);
@@ -227,6 +284,7 @@ export default function CreateNewTask({
         Create New Task
       </h2>
 
+      {/* TASK NAME */}
       <Input
         name="name"
         placeholder="Task Title"
@@ -235,6 +293,7 @@ export default function CreateNewTask({
         required
       />
 
+      {/* DESCRIPTION */}
       <Textarea
         name="description"
         placeholder="Task Description"
@@ -242,7 +301,7 @@ export default function CreateNewTask({
         onChange={handleChange}
       />
 
-      {/* PROJECT DROPDOWN */}
+      {/* PROJECT */}
       <Select
         value={formData.projectId}
         onValueChange={(val) =>
@@ -264,7 +323,10 @@ export default function CreateNewTask({
 
         <SelectContent>
           {projects.map((p) => (
-            <SelectItem key={p.$id} value={p.$id}>
+            <SelectItem
+              key={p.$id}
+              value={p.$id}
+            >
               {p.projectName}
             </SelectItem>
           ))}
@@ -282,15 +344,30 @@ export default function CreateNewTask({
         }
       >
         <SelectTrigger>
-          <SelectValue placeholder="Select Assignee" />
+          <SelectValue
+            placeholder={
+              loadingMembers
+                ? "Loading members..."
+                : "Select Assignee"
+            }
+          />
         </SelectTrigger>
 
         <SelectContent>
-          {members.map((m) => (
-            <SelectItem key={m.userId} value={m.userId}>
-              {m.userName}
-            </SelectItem>
-          ))}
+          {members.length > 0 ? (
+            members.map((m) => (
+              <SelectItem
+                key={m.userId}
+                value={m.userId}
+              >
+                {m.userName}
+              </SelectItem>
+            ))
+          ) : (
+            <div className="p-2 text-sm text-muted-foreground">
+              No members found
+            </div>
+          )}
         </SelectContent>
       </Select>
 
@@ -317,19 +394,36 @@ export default function CreateNewTask({
         </SelectTrigger>
 
         <SelectContent>
-          <SelectItem value={TaskStatus.TODO}>Todo</SelectItem>
-          <SelectItem value={TaskStatus.IN_PROGRESS}>
+          <SelectItem value={TaskStatus.TODO}>
+            Todo
+          </SelectItem>
+
+          <SelectItem
+            value={TaskStatus.IN_PROGRESS}
+          >
             In Progress
           </SelectItem>
-          <SelectItem value={TaskStatus.IN_REVIEW}>
+
+          <SelectItem
+            value={TaskStatus.IN_REVIEW}
+          >
             In Review
           </SelectItem>
-          <SelectItem value={TaskStatus.DONE}>Done</SelectItem>
+
+          <SelectItem value={TaskStatus.DONE}>
+            Done
+          </SelectItem>
         </SelectContent>
       </Select>
 
-      <Button type="submit" disabled={submitting}>
-        {submitting ? "Creating..." : "Create Task"}
+      {/* SUBMIT */}
+      <Button
+        type="submit"
+        disabled={submitting}
+      >
+        {submitting
+          ? "Creating..."
+          : "Create Task"}
       </Button>
     </form>
   );
