@@ -48,6 +48,7 @@ export const useLogin = () => {
       });
 
       router.push("/dashboard");
+      router.refresh();
     },
 
     onError: () => {

@@ -10,7 +10,7 @@ export const getCurrent = async () => { //getCurrent adalah function untuk menda
   try{
       const client = new Client() //membuat instance Appwrite client
           .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!)
-          .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT!)
+          .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID!)
   
       const session = (await cookies()).get(AUTH_COOKIE); //mengambil cookie autentikasi
   
