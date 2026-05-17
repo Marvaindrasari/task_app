@@ -110,13 +110,7 @@ export default function WorkspaceSetting({ workspaceId }: Props) {
   return (
     <div className="space-y-6">
 
-      {/* BACK BUTTON */}
-      <button
-        onClick={() => router.back()}
-        className="border px-4 py-2 rounded cursor-pointer"
-      >
-        ← Back
-      </button>
+      
 
       <h1 className="text-2xl font-bold">
         Workspace Settings
@@ -155,6 +149,14 @@ export default function WorkspaceSetting({ workspaceId }: Props) {
           Delete Workspace
         </button>
       </div>
+
+      {/* BACK BUTTON */}
+      <button
+        onClick={() => router.back()}
+        className="border px-4 py-2 rounded cursor-pointer bg-blue-500"
+      >
+        ← Back
+      </button>
     </div>
   );
 }
