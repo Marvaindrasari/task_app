@@ -7,37 +7,53 @@ import { InferRequestType, InferResponseType } from "hono";
 import { client } from "@/lib/rpc";
 import { useRouter } from "next/navigation";
 
-type ResponseType = InferResponseType<typeof client.api.auth.login["$post"]>;
-type RequestType = InferRequestType<typeof client.api.auth.login["$post"]>;
+type ResponseType =
+  InferResponseType<typeof client.api.auth.login["$post"]>;
+
+type RequestType =
+  InferRequestType<typeof client.api.auth.login["$post"]>;
 
 export const useLogin = () => {
-    const router = useRouter();
-    const queryClient = useQueryClient();
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
-    const mutation = useMutation<
+  const mutation = useMutation<
     ResponseType,
     Error,
     RequestType
-    >({
-        mutationFn: async ({ json }) => {
-            const response = await client.api.auth.login["$post"]({json});
+  >({
+    mutationFn: async ({ json }) => {
 
-            if (!response.ok) {
-                throw new Error("Failed to login");
-            }
+      const response = await client.api.auth.login["$post"](
+        { json },
+        {
+          init: {
+            credentials: "include",
+          },
+        }
+      );
 
-            return await response.json();
-        },
-        onSuccess: () => {
-            toast.success("Login success");
-            router.push("/dashboard");
-            router.refresh();
-            queryClient.invalidateQueries({ queryKey: ["current"] });
-        },
-        onError: () =>{
-            toast.error("Login failed")
-        },
-    });
+      if (!response.ok) {
+        throw new Error("Failed to login");
+      }
 
-    return mutation;
+      return await response.json();
+    },
+
+    onSuccess: async () => {
+      toast.success("Login success");
+
+      await queryClient.invalidateQueries({
+        queryKey: ["current"],
+      });
+
+      router.push("/dashboard");
+    },
+
+    onError: () => {
+      toast.error("Login failed");
+    },
+  });
+
+  return mutation;
 };
