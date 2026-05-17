@@ -19,7 +19,7 @@ export const Sidebar = () => {
     <aside className="h-full bg-neutral-100 p-4 w-full">
       <Link href="/">
         <Image
-          src="/logo.png"
+          src="/Logo.png"
           alt="logo"
           width={120}
           height={30}
