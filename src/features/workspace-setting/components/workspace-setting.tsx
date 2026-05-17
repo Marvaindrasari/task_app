@@ -1,22 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Props = {
   workspaceId: string;
 };
 
 export default function WorkspaceSetting({ workspaceId }: Props) {
+  const router = useRouter();
+
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // 🔥 FETCH DETAIL WORKSPACE
+  // FETCH DETAIL WORKSPACE
   useEffect(() => {
     if (!workspaceId) return;
 
     const fetchWorkspace = async () => {
       try {
-        const res = await fetch(`/api/workspace-setting/${workspaceId}`);
+        const res = await fetch(
+          `/api/workspace-setting/${workspaceId}`,
+          {
+            credentials: "include",
+          }
+        );
+
         const data = await res.json();
 
         console.log("DETAIL:", data);
@@ -32,52 +41,92 @@ export default function WorkspaceSetting({ workspaceId }: Props) {
     fetchWorkspace();
   }, [workspaceId]);
 
-  // 🔥 UPDATE WORKSPACE
+  // UPDATE WORKSPACE
   const handleUpdate = async () => {
     try {
-      const res = await fetch(`/api/workspace-setting/${workspaceId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name }),
-      });
+      const res = await fetch(
+        `/api/workspace-setting/${workspaceId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({ name }),
+        }
+      );
 
-      if (!res.ok) throw new Error("Update failed");
+      if (!res.ok) {
+        throw new Error("Update failed");
+      }
 
-      alert("Workspace updated!");
+      alert("✅ Workspace updated!");
+
+      router.back();
+      router.refresh();
+
     } catch (err) {
       console.error(err);
       alert("Failed to update workspace");
     }
   };
 
-  // 🔥 DELETE WORKSPACE (optional kalau API ada)
+  // DELETE WORKSPACE
   const handleDelete = async () => {
+    const confirmDelete = confirm(
+      "Are you sure you want to delete this workspace?"
+    );
+
+    if (!confirmDelete) return;
+
     try {
-      const res = await fetch(`/api/workspace-setting/${workspaceId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `/api/workspace-setting/${workspaceId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
 
-      if (!res.ok) throw new Error("Delete failed");
+      if (!res.ok) {
+        throw new Error("Delete failed");
+      }
 
-      alert("Workspace deleted!");
-      window.location.href = "/workspace-settings"; // balik ke list
+      alert("🗑️ Workspace deleted!");
+
+      router.push("/dashboard");
+      router.refresh();
+
     } catch (err) {
       console.error(err);
       alert("Failed to delete workspace");
     }
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) {
+    return <p>Loading...</p>;
+  }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Workspace Settings</h1>
 
-      {/* 🔹 EDIT NAME */}
+      {/* BACK BUTTON */}
+      <button
+        onClick={() => router.back()}
+        className="border px-4 py-2 rounded cursor-pointer"
+      >
+        ← Back
+      </button>
+
+      <h1 className="text-2xl font-bold">
+        Workspace Settings
+      </h1>
+
+      {/* EDIT NAME */}
       <div className="space-y-2">
-        <label className="font-medium">Workspace Name</label>
+        <label className="font-medium">
+          Workspace Name
+        </label>
 
         <input
           value={name}
@@ -93,7 +142,7 @@ export default function WorkspaceSetting({ workspaceId }: Props) {
         </button>
       </div>
 
-      {/* 🔥 DANGER ZONE */}
+      {/* DANGER ZONE */}
       <div className="border-t pt-6">
         <h2 className="text-red-500 font-semibold mb-2">
           Danger Zone
@@ -106,8 +155,6 @@ export default function WorkspaceSetting({ workspaceId }: Props) {
           Delete Workspace
         </button>
       </div>
-    
-    
     </div>
   );
 }
