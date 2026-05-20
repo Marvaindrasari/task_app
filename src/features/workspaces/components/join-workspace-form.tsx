@@ -51,7 +51,7 @@ export const JoinWorkspaceForm = ({
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     mutate(values, {
       onSuccess: () => {
-        router.refresh();
+        window.location.reload();
       },
     });
   };
