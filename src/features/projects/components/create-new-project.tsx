@@ -68,8 +68,22 @@ export default function CreateNewProject({
     });
   };
 
+  const validateForm = () => {
+    if (!formData.projectName) {
+      return "Project name is required";
+    }
+
+    return null;
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const error = validateForm();
+    if (error) {
+      alert(error);
+      return;
+    }
 
     const projectOwner = userId || "guest";
 

@@ -18,4 +18,5 @@ export default function NewProjectPage() {
             <CreateNewTask workspaceId={workspaceId}/>
         </div>
     );
+
 }
