@@ -73,6 +73,14 @@ export default function CreateNewProject({
       return "Project name is required";
     }
 
+    if (!formData.startDate) {
+      return "Start date is required";
+    }
+
+    if (!formData.endDate) {
+      return "End date is required";
+    }
+
     return null;
   }
 
