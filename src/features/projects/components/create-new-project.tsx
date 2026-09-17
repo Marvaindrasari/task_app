@@ -154,7 +154,6 @@ export default function CreateNewProject({
         placeholder="Project Name"
         value={formData.projectName}
         onChange={handleChange}
-        required
       />
 
       <Textarea
